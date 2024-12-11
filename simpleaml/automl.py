@@ -54,7 +54,7 @@ def _hp_optimization(model, hps, X, y, n_trials, n_folds, stratified,metric,rand
 
 
 class AutoMLClassification:
-    def __init__(self, models: ModelCollection, metric: str="acc",n_trials: int=10, n_folds: int=3, stratified: bool=True,random_seed: int=42):
+    def __init__(self, models: ModelCollection=BasicModels, metric: str="acc",n_trials: int=10, n_folds: int=3, stratified: bool=True,random_seed: int=42):
         self.models = models
         self.n_trials = n_trials
         self.n_folds = n_folds
