@@ -1,19 +1,18 @@
 import numpy as np
 import optuna
+import json
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import KFold
 
-from models import ModelCollection
-from models import BasicModels
+from simpleaml.models import ModelCollection
+from simpleaml.models import BasicModels
 
 
 def _hp_optimization(model, hps, X, y, n_trials, n_folds, stratified,metric,random_seed):
     def objective(trial):
-        print(f"Trial: {trial.number}")
-        
         hp_trial_dict = {}
         
         for hp in hps:
@@ -37,10 +36,12 @@ def _hp_optimization(model, hps, X, y, n_trials, n_folds, stratified,metric,rand
         for i, (train_index, test_index) in enumerate(kf.split(X, y)):
             cur_model.fit(X[train_index], y[train_index])
             y_pred = cur_model.predict(X[test_index])
-            cur_acc = accuracy_score(y[test_index], y_pred)
-            cur_auc = roc_auc_score(y[test_index], y_pred)
-            auc.append(cur_auc)
-            acc.append(cur_acc)
+            if metric == "acc":
+                cur_acc = accuracy_score(y[test_index], y_pred)
+                acc.append(cur_acc)
+            else:
+                cur_auc = roc_auc_score(y[test_index], y_pred)
+                auc.append(cur_auc)
             
         if metric == "acc":
             return np.mean(acc)
@@ -66,12 +67,13 @@ class AutoMLClassification:
     
     def fit(self, X, y):
         for name, model,hps in self.models:
+            if hps == []:
+                n_trials = 1
+            else:
+                n_trials = self.n_trials
             print(f"Optimizing {name}")
-            self.results_metric[name], self.results_hps[name] = _hp_optimization(model, hps, X, y, self.n_trials, self.n_folds, self.stratified,self.metric,self.random_seed)
-        print(self.results_metric)
-        print(self.results_hps)
+            self.results_metric[name], self.results_hps[name] = _hp_optimization(model, hps, X, y, n_trials, self.n_folds, self.stratified,self.metric,self.random_seed)
         best_index = max(self.results_metric, key=self.results_metric.get)
-        print(self.models[best_index])
         self.best_model = self.models[best_index][1](**self.results_hps[best_index])
         self.best_model.fit(X, y)
         
@@ -80,14 +82,20 @@ class AutoMLClassification:
     
     def predict_proba(self, X):
         return self.best_model.predict_proba(X)
+    
+    def save_tuning(self, path, filename):
+        d = {}
+        for model_name,_,_ in self.models:
+            d[model_name] = {"metric":self.results_metric[model_name], "hps":self.results_hps[model_name]}
+        with open(f"{path}/{filename}.json", "w") as file:
+            json.dump(d,file,indent=4)
         
         
 if __name__ == "__main__":
-    from sklearn.datasets import make_classification
-    X, y = make_classification(n_features=2, n_redundant=0, n_informative=2, random_state=1, n_clusters_per_class=1)
-    X += 2 * np.random.uniform(size=X.shape)
+    from sklearn.datasets import load_iris
+    X, y = load_iris(return_X_y=True)
     
-    aml = AutoMLClassification(BasicModels,metric="auc")
+    aml = AutoMLClassification(BasicModels,metric="acc",n_trials=50)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
     aml.fit(X_train,y_train)
     y_pred = aml.predict(X_test)

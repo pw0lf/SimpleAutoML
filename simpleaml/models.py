@@ -1,5 +1,6 @@
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 
 class ModelCollection:
     def __init__(self, models: list, model_names:list, hyperparameters: list):
@@ -42,8 +43,9 @@ class ModelCollection:
     def __repr__(self):
         return str(self)
     
-logreg_hps = [("C","float",(0.0,1.0)),("penalty","fixed","l2"),("solver","fixed","lbfgs"),("fit_intercept","category",[True,False])]
+logreg_hps = [("C","float",(0.0,1.0)),("penalty","fixed","l2"),("solver","fixed","lbfgs"),("fit_intercept","categorical",[True,False])]
 rf_hps = [("n_estimators","int",(10,100)),("max_depth","int",(1,10)),("min_samples_split","int",(2,10)),("min_samples_leaf","int",(1,10))]
-BasicModels = ModelCollection([LogisticRegression,LogisticRegression,RandomForestClassifier,RandomForestClassifier], 
-                              ["LogisticRegression_plain","LogisticRegression_tuned","RandomForest_plain","RandomForest_tuned"], 
-                              [[],logreg_hps,[],rf_hps])
+svc_hps = [("C","float",(0.0,1.0)),("kernel","categorical",["linear","rbf","poly","sigmoid"])]
+BasicModels = ModelCollection([LogisticRegression,LogisticRegression,RandomForestClassifier,RandomForestClassifier,SVC,SVC], 
+                              ["LogisticRegression_plain","LogisticRegression_tuned","RandomForest_plain","RandomForest_tuned","SVC_plain","SVC_tuned"], 
+                              [[],logreg_hps,[],rf_hps,[],svc_hps])
